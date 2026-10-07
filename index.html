@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDA - CFG Converter & Simulator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app">
+
+    <!-- ================= TOP NAVIGATION / HEADER ================= -->
+    <header class="header">
+        <div class="brand">
+            <div class="logo">
+                <span>[H]</span>
+            </div>
+            <div class="brand-text">
+                <div class="brand-title-row">
+                    <h1>PDA — CFG Converter & Simulator</h1>
+                    <span class="badge-tag">THEORY OF COMPUTATION</span>
+                </div>
+                <p>Convert Context-Free Grammar to Pushdown Automaton & simulate string derivations step-by-step</p>
+            </div>
+        </div>
+        <div class="header-controls">
+            <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Light and Dark Mode" title="Switch between Dark and Light mode">
+                <span class="theme-icon" id="themeIcon">☀️</span>
+                <span class="theme-label" id="themeLabel">Light Mode</span>
+            </button>
+            <div class="header-status">
+                <span class="status-indicator"></span>
+                <span class="status-text">Engine Ready</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================= MAIN TWO-PANEL WORKSPACE ================= -->
+    <main class="main-grid">
+
+        <!-- ================================================= -->
+        <!-- LEFT PANEL: LIVE DIAGRAM & STEP-BY-STEP OUTPUT   -->
+        <!-- ================================================= -->
+        <section class="panel output-panel">
+
+            <div class="panel-header">
+                <div class="panel-header-title">
+                    <span class="panel-icon live-dot">⚡</span>
+                    <h2>Simulation & Live PDA Diagram</h2>
+                </div>
+                <div class="step-badge-counter">
+                    <span>Step</span>
+                    <strong id="stepBadgeCounter">0</strong>
+                </div>
+            </div>
+
+            <div class="panel-content">
+
+                <!-- 1. LIVE PDA VISUALIZATION (VECTOR SVG) -->
+                <div class="card diagram-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="icon-accent cyan">🔗</span>
+                            <span>Live PDA State Machine</span>
+                        </div>
+                        <span class="card-subtitle">Real-time transition animation</span>
+                    </div>
+
+                    <div class="pda-diagram-container">
+                        <div class="diagram-canvas-svg">
+                            <svg id="pdaSvgDiagram" viewBox="0 0 720 180" preserveAspectRatio="xMidYMid meet">
+                                <defs>
+                                    <!-- Arrowhead Markers -->
+                                    <marker id="markerArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-default"></path>
+                                    </marker>
+                                    <marker id="markerArrowActive" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-active"></path>
+                                    </marker>
+                                    <marker id="markerArrowGreen" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-green"></path>
+                                    </marker>
+                                    <marker id="markerArrowLoop" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-loop"></path>
+                                    </marker>
+
+                                    <!-- State Radial Gradients -->
+                                    <radialGradient id="gradQ0" cx="40%" cy="40%" r="65%">
+                                        <stop offset="0%" stop-color="#14344d"/>
+                                        <stop offset="100%" stop-color="#081826"/>
+                                    </radialGradient>
+                                    <radialGradient id="gradQ1" cx="40%" cy="40%" r="65%">
+                                        <stop offset="0%" stop-color="#0a3320"/>
+                                        <stop offset="100%" stop-color="#051a10"/>
+                                    </radialGradient>
+                                    <radialGradient id="gradQ2" cx="40%" cy="40%" r="65%">
+                                        <stop offset="0%" stop-color="#241b3d"/>
+                                        <stop offset="100%" stop-color="#100b21"/>
+                                    </radialGradient>
+
+                                    <!-- Glow Filter -->
+                                    <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+                                        <feGaussianBlur stdDeviation="4" result="blur" />
+                                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                    </filter>
+                                </defs>
+
+                                <!-- START POINTER -->
+                                <g class="svg-start-group">
+                                    <line x1="22" y1="112" x2="62" y2="112" class="svg-line-start" marker-end="url(#markerArrow)"/>
+                                    <text x="24" y="102" class="svg-label-start">START</text>
+                                </g>
+
+                                <!-- TRANSITION q0 -> q1 -->
+                                <g id="transQ0Q1" class="svg-trans-group">
+                                    <line x1="138" y1="112" x2="280" y2="112" class="svg-trans-line" marker-end="url(#markerArrow)"/>
+                                    <g class="svg-badge-wrapper" transform="translate(209, 92)">
+                                        <rect x="-44" y="-12" width="88" height="22" rx="4" class="svg-badge-bg"/>
+                                        <text id="labelQ0Q1" x="0" y="3" text-anchor="middle" class="svg-badge-text">ε, Z → SZ</text>
+                                    </g>
+                                </g>
+
+                                <!-- SELF LOOP ON q1 (PROCESSING) -->
+                                <g id="transLoop" class="svg-trans-group loop-group">
+                                    <path d="M 298,82 C 280,18 360,18 342,82" class="svg-trans-loop" marker-end="url(#markerArrowLoop)"/>
+                                    <g class="svg-badge-wrapper loop-badge-wrap" transform="translate(320, 18)">
+                                        <rect id="loopBadgeBg" x="-58" y="-13" width="116" height="24" rx="5" class="svg-badge-bg loop-bg"/>
+                                        <text id="transitionText" x="0" y="3" text-anchor="middle" class="svg-badge-text loop-text">ε, S → aSb</text>
+                                    </g>
+                                </g>
+
+                                <!-- TRANSITION q1 -> q2 -->
+                                <g id="transQ1Q2" class="svg-trans-group">
+                                    <line x1="360" y1="112" x2="500" y2="112" class="svg-trans-line" marker-end="url(#markerArrow)"/>
+                                    <g class="svg-badge-wrapper" transform="translate(430, 92)">
+                                        <rect x="-40" y="-12" width="80" height="22" rx="4" class="svg-badge-bg"/>
+                                        <text id="labelQ1Q2" x="0" y="3" text-anchor="middle" class="svg-badge-text">ε, Z → ε</text>
+                                    </g>
+                                </g>
+
+                                <!-- STATE q0 (START/INIT) -->
+                                <g id="stateQ0" class="svg-state-group" transform="translate(100, 112)">
+                                    <circle r="36" class="svg-state-node q0-node"/>
+                                    <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">0</tspan></text>
+                                    <text y="19" text-anchor="middle" class="svg-state-role">Init</text>
+                                </g>
+
+                                <!-- STATE q1 (COMPUTE/PROCESSING) -->
+                                <g id="stateQ1" class="svg-state-group active-state" transform="translate(320, 112)">
+                                    <circle r="36" class="svg-state-node q1-node"/>
+                                    <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">1</tspan></text>
+                                    <text y="19" text-anchor="middle" class="svg-state-role">Compute</text>
+                                </g>
+
+                                <!-- STATE q2 (ACCEPT/FINAL) - CONCENTRIC DOUBLE RING -->
+                                <g id="stateQ2" class="svg-state-group final-group" transform="translate(540, 112)">
+                                    <circle r="36" class="svg-state-node q2-node outer-ring"/>
+                                    <circle r="29" class="svg-state-node q2-node inner-ring"/>
+                                    <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">2</tspan></text>
+                                    <text y="19" text-anchor="middle" class="svg-state-role">Accept</text>
+                                </g>
+                            </svg>
+                        </div>
+
+                        <!-- LIVE TRANSITION EXPLANATION BAR -->
+                        <div class="diagram-status-bar" id="diagramStatusBar">
+                            <span class="status-pill idle" id="livePill">IDLE</span>
+                            <div class="status-message">
+                                <strong>Active Transition:</strong>
+                                <span id="currentTransition">Press "Start Simulation" to begin</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. MACHINE STATE DASHBOARD -->
+                <div class="card state-dashboard-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="icon-accent green">📊</span>
+                            <span>Machine Dashboard</span>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="metric-box">
+                            <span class="metric-label">CURRENT STEP</span>
+                            <strong class="metric-val" id="stepNumber">0</strong>
+                        </div>
+
+                        <div class="metric-box">
+                            <span class="metric-label">ACTIVE STATE</span>
+                            <strong class="metric-val accent-green" id="currentState">q1</strong>
+                        </div>
+
+                        <div class="metric-box">
+                            <span class="metric-label">INPUT POINTER</span>
+                            <strong class="metric-val accent-cyan" id="inputPosition">0</strong>
+                        </div>
+                    </div>
+
+                    <!-- INPUT & STACK VISUAL STRIP -->
+                    <div class="visual-split">
+                        <div class="sub-visual remaining-input-box">
+                            <div class="sub-visual-label">
+                                <span>REMAINING INPUT TAPE</span>
+                            </div>
+                            <div id="remainingInput" class="code-stream">aabb</div>
+                        </div>
+
+                        <div class="sub-visual stack-box">
+                            <div class="sub-visual-label">
+                                <span>STACK (TOP ON RIGHT)</span>
+                            </div>
+                            <div id="stackVisual" class="stack-track">
+                                <div class="stack-cell top-cell">S</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. SIMULATION STEPS LOG (CONTAINED - CANNOT EXIT BOX) -->
+                <div class="card steps-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="icon-accent purple">📋</span>
+                            <span>Simulation Step Log</span>
+                        </div>
+                        <span class="tag-counter" id="totalStepsRecorded">0 Recorded</span>
+                    </div>
+
+                    <!-- BOUNDED CONTAINER: STYLED SCROLLBAR, NEVER EXITS BOX -->
+                    <div class="table-container-wrapper">
+                        <table class="steps-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-step">Step</th>
+                                    <th class="col-state">State</th>
+                                    <th class="col-input">Remaining</th>
+                                    <th class="col-stack">Stack</th>
+                                    <th class="col-action">Action / Rule</th>
+                                </tr>
+                            </thead>
+                            <tbody id="simulationTable">
+                                <!-- Steps appended dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. ACCEPT / REJECT BANNER -->
+                <div id="resultBox" class="result-box hidden">
+                    <div id="resultIcon" class="result-icon-badge">✓</div>
+                    <div class="result-details">
+                        <strong id="resultText">ACCEPTED</strong>
+                        <p id="resultDescription">The input string is accepted by the Pushdown Automaton.</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- ================================================= -->
+        <!-- RIGHT PANEL: USER INPUT, CONTROLS & CFG REFERENCE -->
+        <!-- ================================================= -->
+        <section class="panel input-panel">
+
+            <div class="panel-header">
+                <div class="panel-header-title">
+                    <span class="panel-icon">✏️</span>
+                    <h2>Problem Inputs & Controls</h2>
+                </div>
+                <span class="badge-tag green-tag">CONFIG</span>
+            </div>
+
+            <div class="panel-content">
+
+                <!-- 1. CFG GRAMMAR INPUT -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="step-num">1</span>
+                            <span>Context-Free Grammar (CFG)</span>
+                        </div>
+                    </div>
+
+                    <div class="form-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="variables">Variables (V)</label>
+                                <input
+                                    id="variables"
+                                    type="text"
+                                    value="S"
+                                    placeholder="e.g. S, A, B"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="terminals">Terminals (Σ)</label>
+                                <input
+                                    id="terminals"
+                                    type="text"
+                                    value="a,b"
+                                    placeholder="e.g. a, b"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="productions">
+                                <span>Productions (P)</span>
+                                <small class="input-hint">Use <code>e</code> or <code>ε</code> for epsilon</small>
+                            </label>
+                            <textarea
+                                id="productions"
+                                rows="4"
+                                placeholder="S -> aSb&#10;S -> e"
+                                autocomplete="off"
+                                spellcheck="false"
+                            >S -> aSb
+S -> e</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. INPUT STRING -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="step-num orange-step">2</span>
+                            <span>Input String to Verify (w)</span>
+                        </div>
+                    </div>
+
+                    <div class="form-body">
+                        <div class="form-group">
+                            <label for="inputString">Input String</label>
+                            <input
+                                id="inputString"
+                                type="text"
+                                value="aabb"
+                                placeholder="e.g. aabb (or e for empty)"
+                                autocomplete="off"
+                                spellcheck="false"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ACTION BUTTONS (HACKERRANK STYLE) -->
+                <div class="actions-card">
+                    <div class="button-grid">
+                        <button id="convertBtn" class="btn btn-primary" title="Convert CFG to Pushdown Automaton">
+                            <span class="btn-icon">⚙</span>
+                            <span>Convert to PDA</span>
+                        </button>
+
+                        <button id="simulateBtn" class="btn btn-accent" title="Initialize step-by-step simulation">
+                            <span class="btn-icon">▶</span>
+                            <span>Start Simulation</span>
+                        </button>
+                    </div>
+
+                    <div class="button-grid secondary-actions">
+                        <button id="nextBtn" class="btn btn-step" disabled title="Advance simulation by one step">
+                            <span class="btn-icon">➜</span>
+                            <span>Next Step</span>
+                        </button>
+
+                        <button id="resetBtn" class="btn btn-reset" title="Reset simulation to initial state">
+                            <span class="btn-icon">↺</span>
+                            <span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. CFG SUMMARY & EQUIVALENT PDA TRANSITIONS -->
+                <div class="card cfg-details-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="icon-accent cyan">📖</span>
+                            <span>Parsed CFG Details</span>
+                        </div>
+                    </div>
+
+                    <div class="cfg-details-body">
+                        <div class="cfg-spec-row">
+                            <span class="cfg-spec-key">Variables:</span>
+                            <span id="displayVariables" class="cfg-spec-val code-text">S</span>
+                        </div>
+                        <div class="cfg-spec-row">
+                            <span class="cfg-spec-key">Terminals:</span>
+                            <span id="displayTerminals" class="cfg-spec-val code-text">a, b</span>
+                        </div>
+                        <div class="cfg-spec-row prod-row">
+                            <span class="cfg-spec-key">Productions:</span>
+                            <div id="displayProductions" class="cfg-spec-val code-text productions-block">
+                                S → aSb<br>S → ε
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. SAMPLE TEST CASES -->
+                <div class="card examples-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="icon-accent gold">💡</span>
+                            <span>Quick Test Cases</span>
+                        </div>
+                        <span class="card-subtitle">L = { aⁿbⁿ | n ≥ 0 }</span>
+                    </div>
+
+                    <div class="examples-body">
+                        <p class="examples-label">Click any preset string to test:</p>
+                        <div class="example-buttons">
+                            <button class="preset-btn valid" data-example="aabb">
+                                <span>aabb</span>
+                                <small class="pill-valid">VALID</small>
+                            </button>
+                            <button class="preset-btn valid" data-example="aaabbb">
+                                <span>aaabbb</span>
+                                <small class="pill-valid">VALID</small>
+                            </button>
+                            <button class="preset-btn valid" data-example="e">
+                                <span>ε (empty)</span>
+                                <small class="pill-valid">VALID</small>
+                            </button>
+                            <button class="preset-btn invalid" data-example="aab">
+                                <span>aab</span>
+                                <small class="pill-invalid">INVALID</small>
+                            </button>
+                            <button class="preset-btn invalid" data-example="abab">
+                                <span>abab</span>
+                                <small class="pill-invalid">INVALID</small>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. HOW CONVERSION WORKS -->
+                <div class="card workflow-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="icon-accent purple">ℹ️</span>
+                            <span>Standard PDA Construction</span>
+                        </div>
+                    </div>
+                    <div class="workflow-body">
+                        <ol class="workflow-steps">
+                            <li><strong>Start:</strong> Push start symbol $S$ and bottom marker $Z$ on state $q_0 \to q_1$.</li>
+                            <li><strong>Expand:</strong> In $q_1$, replace top variable $A$ with RHS $\alpha$ $(\varepsilon, A \to \alpha)$.</li>
+                            <li><strong>Match:</strong> In $q_1$, match terminal $a$ with input symbol $(a, a \to \varepsilon)$.</li>
+                            <li><strong>Accept:</strong> When input is consumed & stack is empty, transition to $q_2$ (Accept).</li>
+                        </ol>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
