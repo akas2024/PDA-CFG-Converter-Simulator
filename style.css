@@ -1318,6 +1318,27 @@ textarea::placeholder {
     box-shadow: 0 2px 10px rgba(0, 234, 100, 0.4);
 }
 
+/* Previous Step Button: Deep Teal */
+.btn-prev {
+    background: #0f766e;
+    color: white;
+}
+
+body.light-mode .btn-prev {
+    background: #0d9488;
+    color: white;
+}
+
+.btn-prev:hover:not(:disabled) {
+    background: #14b8a6;
+    box-shadow: 0 2px 10px rgba(20, 184, 166, 0.35);
+}
+
+.button-grid.step-controls-3 {
+    grid-template-columns: 1fr 1.1fr 1fr;
+    gap: 6px;
+}
+
 /* Next Step Button: Deep Emerald */
 .btn-step {
     background: #059669;
@@ -1754,6 +1775,16 @@ details.workflow-card[open] .workflow-toggle-icon {
     .button-grid {
         grid-template-columns: 1fr;
         gap: 6px;
+    }
+
+    .button-grid.step-controls-3 {
+        grid-template-columns: 1fr 1.15fr 1fr;
+        gap: 4px;
+    }
+
+    .button-grid.step-controls-3 .btn {
+        padding: 6px 4px;
+        font-size: 11px;
     }
 
     .example-buttons {

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDA - CFG Converter & Simulator</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="ai-tutor/chat.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -28,6 +29,11 @@
             </div>
         </div>
         <div class="header-controls">
+            <button id="aiTutorBtn" class="ai-tutor-btn" aria-label="Open AI Tutor" title="Ask AI Tutor about CFG, PDA & Automata">
+                <span class="ai-tutor-icon">🤖</span>
+                <span class="ai-tutor-label">AI Tutor</span>
+                <span class="ai-tutor-pulse-dot"></span>
+            </button>
             <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Light and Dark Mode" title="Switch between Dark and Light mode">
                 <span class="theme-icon" id="themeIcon">☀️</span>
                 <span class="theme-label" id="themeLabel">Light Mode</span>
@@ -364,7 +370,12 @@ S -> e</textarea>
                         </button>
                     </div>
 
-                    <div class="button-grid secondary-actions">
+                    <div class="button-grid secondary-actions step-controls-3">
+                        <button id="prevBtn" class="btn btn-prev" disabled title="Go back to previous simulation step">
+                            <span class="btn-icon">⬅</span>
+                            <span>Previous</span>
+                        </button>
+
                         <button id="nextBtn" class="btn btn-step" disabled title="Advance simulation by one step">
                             <span class="btn-icon">➜</span>
                             <span>Next Step</span>
@@ -468,5 +479,6 @@ S -> e</textarea>
 </div>
 
 <script src="script.js"></script>
+<script src="ai-tutor/chat.js"></script>
 </body>
 </html>

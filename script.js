@@ -12,6 +12,7 @@ let visited = new Set();
 let currentStep = 0;
 let simulationStarted = false;
 let simulationFinished = false;
+let simulationHistory = [];
 
 // ------------------------------------------------------------
 // DOM ELEMENTS
@@ -23,6 +24,7 @@ const inputStringInput = document.getElementById("inputString");
 
 const convertBtn = document.getElementById("convertBtn");
 const simulateBtn = document.getElementById("simulateBtn");
+const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const resetBtn = document.getElementById("resetBtn");
 
@@ -401,6 +403,31 @@ function showConfiguration(config) {
 }
 
 // ------------------------------------------------------------
+// RECORD STEP SNAPSHOT (FOR PREVIOUS STEP NAVIGATION)
+// ------------------------------------------------------------
+function recordStepSnapshot(config, action, diagramPhase, diagramDetails, isAccepted = null) {
+    simulationHistory.push({
+        stepNumber: currentStep,
+        config: { inputPos: config.inputPos, stack: config.stack },
+        action: action,
+        diagramPhase: diagramPhase,
+        diagramDetails: diagramDetails || {},
+        isAccepted: isAccepted,
+        currentState: currentState ? currentState.textContent : "q1",
+        simulationQueue: simulationQueue.map(item => ({ ...item })),
+        visited: new Set(visited),
+        simulationFinished: simulationFinished,
+        currentTransitionText: currentTransition ? currentTransition.textContent : "",
+        livePillClass: livePill ? livePill.className : "",
+        livePillText: livePill ? livePill.textContent : ""
+    });
+
+    if (prevBtn) {
+        prevBtn.disabled = (simulationHistory.length <= 1);
+    }
+}
+
+// ------------------------------------------------------------
 // SET RESULT BANNER
 // ------------------------------------------------------------
 function showResult(accepted) {
@@ -462,9 +489,12 @@ function startSimulation() {
     // Reset simulation variables
     simulationQueue = [];
     visited = new Set();
+    simulationHistory = [];
     currentStep = 0;
     simulationStarted = true;
     simulationFinished = false;
+
+    if (prevBtn) prevBtn.disabled = true;
 
     simulationTable.innerHTML = "";
     if (totalStepsRecorded) totalStepsRecorded.textContent = "0 Recorded";
@@ -483,6 +513,7 @@ function startSimulation() {
     addSimulationRow(initial, "Start (Push " + initial.stack + ")");
 
     updateDiagram("start", { top: initial.stack });
+    recordStepSnapshot(initial, "Start (Push " + initial.stack + ")", "start", { top: initial.stack }, null);
 }
 
 // ------------------------------------------------------------
@@ -496,6 +527,13 @@ function nextStep() {
         simulationFinished = true;
         showResult(false);
         nextBtn.disabled = true;
+        recordStepSnapshot(
+            { inputPos: inputPosition ? parseInt(inputPosition.textContent, 10) || 0 : 0, stack: "" },
+            "REJECT",
+            "reject",
+            {},
+            false
+        );
         return;
     }
 
@@ -512,6 +550,7 @@ function nextStep() {
 
         simulationFinished = true;
         nextBtn.disabled = true;
+        recordStepSnapshot(current, "ACCEPT", "accept", {}, true);
         return;
     }
 
@@ -570,6 +609,7 @@ function nextStep() {
             showConfiguration(primaryChild);
             addSimulationRow(primaryChild, primaryChild.action);
             updateDiagram("expand", primaryChild.rule);
+            recordStepSnapshot(primaryChild, primaryChild.action, "expand", primaryChild.rule, null);
         } else {
             processNextConfiguration();
         }
@@ -606,6 +646,7 @@ function nextStep() {
             showConfiguration(next);
             addSimulationRow(next, next.action);
             updateDiagram("match", next.rule);
+            recordStepSnapshot(next, next.action, "match", next.rule, null);
         } else {
             processNextConfiguration();
         }
@@ -628,6 +669,13 @@ function processNextConfiguration() {
         simulationFinished = true;
         showResult(false);
         nextBtn.disabled = true;
+        recordStepSnapshot(
+            { inputPos: inputPosition ? parseInt(inputPosition.textContent, 10) || 0 : 0, stack: "" },
+            "REJECT",
+            "reject",
+            {},
+            false
+        );
         return;
     }
 
@@ -639,6 +687,102 @@ function processNextConfiguration() {
     if (next.rule) {
         updateDiagram(next.rule.type, next.rule);
     }
+    recordStepSnapshot(
+        next,
+        next.action || "Try next branch",
+        next.rule ? next.rule.type : "idle",
+        next.rule || {},
+        null
+    );
+}
+
+// ------------------------------------------------------------
+// PREVIOUS SIMULATION STEP (BACKWARD NAVIGATION)
+// ------------------------------------------------------------
+function prevStep() {
+    if (!simulationStarted) return;
+    if (simulationHistory.length <= 1) return;
+
+    // Pop the current step snapshot
+    simulationHistory.pop();
+
+    // The new top is the previous step state
+    const targetState = simulationHistory[simulationHistory.length - 1];
+    if (!targetState) return;
+
+    // Restore step state
+    currentStep = targetState.stepNumber;
+    updateStepCounters(currentStep);
+
+    // Restore queue and visited set
+    simulationQueue = targetState.simulationQueue.map(item => ({ ...item }));
+    visited = new Set(targetState.visited);
+    simulationFinished = !!targetState.simulationFinished;
+    nextBtn.disabled = targetState.simulationFinished;
+
+    // Restore configuration (dashboard, stack, tape)
+    showConfiguration(targetState.config);
+
+    // Restore state badge text
+    if (currentState) {
+        currentState.textContent = targetState.currentState || "q1";
+    }
+
+    // Restore diagram
+    if (targetState.diagramPhase) {
+        updateDiagram(targetState.diagramPhase, targetState.diagramDetails);
+    }
+
+    // Restore result banner
+    if (targetState.isAccepted === true) {
+        showResult(true);
+        simulationFinished = true;
+        nextBtn.disabled = true;
+    } else if (targetState.isAccepted === false) {
+        showResult(false);
+        simulationFinished = true;
+        nextBtn.disabled = true;
+    } else {
+        hideResult();
+    }
+
+    // Restore transition pill and text if available
+    if (currentTransition && targetState.currentTransitionText) {
+        currentTransition.textContent = targetState.currentTransitionText;
+    }
+    if (livePill && targetState.livePillClass) {
+        livePill.className = targetState.livePillClass;
+        livePill.textContent = targetState.livePillText;
+    }
+
+    // Remove the last table row from simulationTable
+    if (simulationTable && simulationTable.lastElementChild) {
+        simulationTable.removeChild(simulationTable.lastElementChild);
+
+        // Highlight new last row
+        document
+            .querySelectorAll("#simulationTable tr")
+            .forEach(r => r.classList.remove("active-row"));
+
+        if (simulationTable.lastElementChild) {
+            simulationTable.lastElementChild.classList.add("active-row");
+        }
+
+        // Auto-scroll inside wrapper
+        const wrapper = document.querySelector(".table-container-wrapper");
+        if (wrapper) {
+            wrapper.scrollTop = wrapper.scrollHeight;
+        }
+
+        if (totalStepsRecorded) {
+            totalStepsRecorded.textContent = `${simulationTable.children.length} Recorded`;
+        }
+    }
+
+    // Update prevBtn disabled state
+    if (prevBtn) {
+        prevBtn.disabled = (simulationHistory.length <= 1);
+    }
 }
 
 // ------------------------------------------------------------
@@ -647,9 +791,12 @@ function processNextConfiguration() {
 function resetSimulation() {
     simulationQueue = [];
     visited = new Set();
+    simulationHistory = [];
     currentStep = 0;
     simulationStarted = false;
     simulationFinished = false;
+
+    if (prevBtn) prevBtn.disabled = true;
 
     updateStepCounters(0);
 
@@ -691,6 +838,7 @@ document.querySelectorAll(".example-buttons button").forEach(button => {
 // ------------------------------------------------------------
 convertBtn.addEventListener("click", convertToPDA);
 simulateBtn.addEventListener("click", startSimulation);
+if (prevBtn) prevBtn.addEventListener("click", prevStep);
 nextBtn.addEventListener("click", nextStep);
 resetBtn.addEventListener("click", resetSimulation);
 

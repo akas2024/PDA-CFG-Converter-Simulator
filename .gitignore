@@ -1,3 +1,6 @@
-﻿a.exe
+a.exe
 *.exe
-
+node_modules/
+.env
+.env.local
+*.log
