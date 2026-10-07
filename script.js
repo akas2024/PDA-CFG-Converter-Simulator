@@ -186,6 +186,17 @@ function updateDiagram(phase, details = {}) {
                 currentTransition.textContent = `q₁ : No valid transition for stack top '${details.top || "ε"}'. String REJECTED.`;
             }
             break;
+
+        case "no-action":
+            if (q1) q1.setAttribute("class", "svg-state-group active-state");
+            if (livePill) {
+                livePill.className = "status-pill reject";
+                livePill.textContent = "NO ACTION";
+            }
+            if (currentTransition) {
+                currentTransition.textContent = "q₁ : No action possible on dead-end branch → Backtracking to next configuration";
+            }
+            break;
     }
 }
 
@@ -360,13 +371,15 @@ function updateStepCounters(step) {
 function addSimulationRow(config, action) {
     const row = document.createElement("tr");
     const stateName = (action === "ACCEPT") ? "q2" : "q1";
+    const isNoAction = (action === "NO ACTION");
+    const pillClass = isNoAction ? "action-pill no-action" : "action-pill";
 
     row.innerHTML = `
         <td class="col-step"><span class="step-num-badge">#${currentStep}</span></td>
         <td class="col-state"><span class="state-badge">${stateName}</span></td>
         <td class="col-input">${getRemainingInput(config.inputPos)}</td>
         <td class="col-stack">${config.stack || "ε"}</td>
-        <td class="col-action"><span class="action-pill">${action}</span></td>
+        <td class="col-action"><span class="${pillClass}">${action}</span></td>
     `;
 
     simulationTable.appendChild(row);
@@ -501,6 +514,7 @@ function startSimulation() {
     hideResult();
 
     const initial = createInitialConfiguration();
+    initial.displayed = true;
 
     simulationQueue.push(initial);
     visited.add(configurationKey(initial));
@@ -605,6 +619,7 @@ function nextStep() {
         }
 
         if (generated && primaryChild) {
+            primaryChild.displayed = true;
             currentStep++;
             showConfiguration(primaryChild);
             addSimulationRow(primaryChild, primaryChild.action);
@@ -640,6 +655,7 @@ function nextStep() {
 
         if (!visited.has(key)) {
             visited.add(key);
+            next.displayed = true;
             simulationQueue.push(next);
 
             currentStep++;
@@ -680,20 +696,34 @@ function processNextConfiguration() {
     }
 
     const next = simulationQueue[0];
+    const actionText = next.displayed ? "NO ACTION" : (next.action || "NO ACTION");
+    next.displayed = true;
 
     currentStep++;
     showConfiguration(next);
-    addSimulationRow(next, next.action || "Try next branch");
-    if (next.rule) {
-        updateDiagram(next.rule.type, next.rule);
+    addSimulationRow(next, actionText);
+
+    if (actionText === "NO ACTION") {
+        updateDiagram("no-action");
+        recordStepSnapshot(
+            next,
+            "NO ACTION",
+            "no-action",
+            {},
+            null
+        );
+    } else {
+        if (next.rule) {
+            updateDiagram(next.rule.type, next.rule);
+        }
+        recordStepSnapshot(
+            next,
+            actionText,
+            next.rule ? next.rule.type : "idle",
+            next.rule || {},
+            null
+        );
     }
-    recordStepSnapshot(
-        next,
-        next.action || "Try next branch",
-        next.rule ? next.rule.type : "idle",
-        next.rule || {},
-        null
-    );
 }
 
 // ------------------------------------------------------------
