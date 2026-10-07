@@ -60,170 +60,175 @@
 
             <div class="panel-content">
 
-                <!-- 1. LIVE PDA VISUALIZATION (VECTOR SVG) -->
-                <div class="card diagram-card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <span class="icon-accent cyan">🔗</span>
-                            <span>Live PDA State Machine</span>
-                        </div>
-                        <span class="card-subtitle">Real-time transition animation</span>
-                    </div>
+                <!-- TOP ROW: PDA DIAGRAM & MACHINE DASHBOARD SIDE-BY-SIDE -->
+                <div class="simulation-top-row">
 
-                    <div class="pda-diagram-container">
-                        <div class="diagram-canvas-svg">
-                            <svg id="pdaSvgDiagram" viewBox="0 0 720 180" preserveAspectRatio="xMidYMid meet">
-                                <defs>
-                                    <!-- Arrowhead Markers -->
-                                    <marker id="markerArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-default"></path>
-                                    </marker>
-                                    <marker id="markerArrowActive" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-active"></path>
-                                    </marker>
-                                    <marker id="markerArrowGreen" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-green"></path>
-                                    </marker>
-                                    <marker id="markerArrowLoop" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                                        <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-loop"></path>
-                                    </marker>
-
-                                    <!-- State Radial Gradients -->
-                                    <radialGradient id="gradQ0" cx="40%" cy="40%" r="65%">
-                                        <stop offset="0%" stop-color="#14344d"/>
-                                        <stop offset="100%" stop-color="#081826"/>
-                                    </radialGradient>
-                                    <radialGradient id="gradQ1" cx="40%" cy="40%" r="65%">
-                                        <stop offset="0%" stop-color="#0a3320"/>
-                                        <stop offset="100%" stop-color="#051a10"/>
-                                    </radialGradient>
-                                    <radialGradient id="gradQ2" cx="40%" cy="40%" r="65%">
-                                        <stop offset="0%" stop-color="#241b3d"/>
-                                        <stop offset="100%" stop-color="#100b21"/>
-                                    </radialGradient>
-
-                                    <!-- Glow Filter -->
-                                    <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
-                                        <feGaussianBlur stdDeviation="4" result="blur" />
-                                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                    </filter>
-                                </defs>
-
-                                <!-- START POINTER -->
-                                <g class="svg-start-group">
-                                    <line x1="22" y1="112" x2="62" y2="112" class="svg-line-start" marker-end="url(#markerArrow)"/>
-                                    <text x="24" y="102" class="svg-label-start">START</text>
-                                </g>
-
-                                <!-- TRANSITION q0 -> q1 -->
-                                <g id="transQ0Q1" class="svg-trans-group">
-                                    <line x1="138" y1="112" x2="280" y2="112" class="svg-trans-line" marker-end="url(#markerArrow)"/>
-                                    <g class="svg-badge-wrapper" transform="translate(209, 92)">
-                                        <rect x="-44" y="-12" width="88" height="22" rx="4" class="svg-badge-bg"/>
-                                        <text id="labelQ0Q1" x="0" y="3" text-anchor="middle" class="svg-badge-text">ε, Z → SZ</text>
-                                    </g>
-                                </g>
-
-                                <!-- SELF LOOP ON q1 (PROCESSING) -->
-                                <g id="transLoop" class="svg-trans-group loop-group">
-                                    <path d="M 298,82 C 280,18 360,18 342,82" class="svg-trans-loop" marker-end="url(#markerArrowLoop)"/>
-                                    <g class="svg-badge-wrapper loop-badge-wrap" transform="translate(320, 18)">
-                                        <rect id="loopBadgeBg" x="-58" y="-13" width="116" height="24" rx="5" class="svg-badge-bg loop-bg"/>
-                                        <text id="transitionText" x="0" y="3" text-anchor="middle" class="svg-badge-text loop-text">ε, S → aSb</text>
-                                    </g>
-                                </g>
-
-                                <!-- TRANSITION q1 -> q2 -->
-                                <g id="transQ1Q2" class="svg-trans-group">
-                                    <line x1="360" y1="112" x2="500" y2="112" class="svg-trans-line" marker-end="url(#markerArrow)"/>
-                                    <g class="svg-badge-wrapper" transform="translate(430, 92)">
-                                        <rect x="-40" y="-12" width="80" height="22" rx="4" class="svg-badge-bg"/>
-                                        <text id="labelQ1Q2" x="0" y="3" text-anchor="middle" class="svg-badge-text">ε, Z → ε</text>
-                                    </g>
-                                </g>
-
-                                <!-- STATE q0 (START/INIT) -->
-                                <g id="stateQ0" class="svg-state-group" transform="translate(100, 112)">
-                                    <circle r="36" class="svg-state-node q0-node"/>
-                                    <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">0</tspan></text>
-                                    <text y="19" text-anchor="middle" class="svg-state-role">Init</text>
-                                </g>
-
-                                <!-- STATE q1 (COMPUTE/PROCESSING) -->
-                                <g id="stateQ1" class="svg-state-group active-state" transform="translate(320, 112)">
-                                    <circle r="36" class="svg-state-node q1-node"/>
-                                    <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">1</tspan></text>
-                                    <text y="19" text-anchor="middle" class="svg-state-role">Compute</text>
-                                </g>
-
-                                <!-- STATE q2 (ACCEPT/FINAL) - CONCENTRIC DOUBLE RING -->
-                                <g id="stateQ2" class="svg-state-group final-group" transform="translate(540, 112)">
-                                    <circle r="36" class="svg-state-node q2-node outer-ring"/>
-                                    <circle r="29" class="svg-state-node q2-node inner-ring"/>
-                                    <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">2</tspan></text>
-                                    <text y="19" text-anchor="middle" class="svg-state-role">Accept</text>
-                                </g>
-                            </svg>
+                    <!-- 1. LIVE PDA VISUALIZATION (VECTOR SVG) -->
+                    <div class="card diagram-card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="icon-accent cyan">🔗</span>
+                                <span>Live PDA State Machine</span>
+                            </div>
+                            <span class="card-subtitle">Real-time transition</span>
                         </div>
 
-                        <!-- LIVE TRANSITION EXPLANATION BAR -->
-                        <div class="diagram-status-bar" id="diagramStatusBar">
-                            <span class="status-pill idle" id="livePill">IDLE</span>
-                            <div class="status-message">
-                                <strong>Active Transition:</strong>
-                                <span id="currentTransition">Press "Start Simulation" to begin</span>
+                        <div class="pda-diagram-container">
+                            <div class="diagram-canvas-svg">
+                                <svg id="pdaSvgDiagram" viewBox="0 0 720 180" preserveAspectRatio="xMidYMid meet">
+                                    <defs>
+                                        <!-- Arrowhead Markers -->
+                                        <marker id="markerArrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                            <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-default"></path>
+                                        </marker>
+                                        <marker id="markerArrowActive" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                            <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-active"></path>
+                                        </marker>
+                                        <marker id="markerArrowGreen" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                            <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-green"></path>
+                                        </marker>
+                                        <marker id="markerArrowLoop" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                                            <path d="M 0 1 L 9 5 L 0 9 z" class="marker-path marker-loop"></path>
+                                        </marker>
+
+                                        <!-- State Radial Gradients -->
+                                        <radialGradient id="gradQ0" cx="40%" cy="40%" r="65%">
+                                            <stop offset="0%" stop-color="#14344d"/>
+                                            <stop offset="100%" stop-color="#081826"/>
+                                        </radialGradient>
+                                        <radialGradient id="gradQ1" cx="40%" cy="40%" r="65%">
+                                            <stop offset="0%" stop-color="#0a3320"/>
+                                            <stop offset="100%" stop-color="#051a10"/>
+                                        </radialGradient>
+                                        <radialGradient id="gradQ2" cx="40%" cy="40%" r="65%">
+                                            <stop offset="0%" stop-color="#241b3d"/>
+                                            <stop offset="100%" stop-color="#100b21"/>
+                                        </radialGradient>
+
+                                        <!-- Glow Filter -->
+                                        <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+                                            <feGaussianBlur stdDeviation="4" result="blur" />
+                                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                        </filter>
+                                    </defs>
+
+                                    <!-- START POINTER -->
+                                    <g class="svg-start-group">
+                                        <line x1="22" y1="112" x2="62" y2="112" class="svg-line-start" marker-end="url(#markerArrow)"/>
+                                        <text x="24" y="102" class="svg-label-start">START</text>
+                                    </g>
+
+                                    <!-- TRANSITION q0 -> q1 -->
+                                    <g id="transQ0Q1" class="svg-trans-group">
+                                        <line x1="138" y1="112" x2="280" y2="112" class="svg-trans-line" marker-end="url(#markerArrow)"/>
+                                        <g class="svg-badge-wrapper" transform="translate(209, 92)">
+                                            <rect x="-44" y="-12" width="88" height="22" rx="4" class="svg-badge-bg"/>
+                                            <text id="labelQ0Q1" x="0" y="3" text-anchor="middle" class="svg-badge-text">ε, Z → SZ</text>
+                                        </g>
+                                    </g>
+
+                                    <!-- SELF LOOP ON q1 (PROCESSING) -->
+                                    <g id="transLoop" class="svg-trans-group loop-group">
+                                        <path d="M 298,82 C 280,18 360,18 342,82" class="svg-trans-loop" marker-end="url(#markerArrowLoop)"/>
+                                        <g class="svg-badge-wrapper loop-badge-wrap" transform="translate(320, 18)">
+                                            <rect id="loopBadgeBg" x="-58" y="-13" width="116" height="24" rx="5" class="svg-badge-bg loop-bg"/>
+                                            <text id="transitionText" x="0" y="3" text-anchor="middle" class="svg-badge-text loop-text">ε, S → aSb</text>
+                                        </g>
+                                    </g>
+
+                                    <!-- TRANSITION q1 -> q2 -->
+                                    <g id="transQ1Q2" class="svg-trans-group">
+                                        <line x1="360" y1="112" x2="500" y2="112" class="svg-trans-line" marker-end="url(#markerArrow)"/>
+                                        <g class="svg-badge-wrapper" transform="translate(430, 92)">
+                                            <rect x="-40" y="-12" width="80" height="22" rx="4" class="svg-badge-bg"/>
+                                            <text id="labelQ1Q2" x="0" y="3" text-anchor="middle" class="svg-badge-text">ε, Z → ε</text>
+                                        </g>
+                                    </g>
+
+                                    <!-- STATE q0 (START/INIT) -->
+                                    <g id="stateQ0" class="svg-state-group" transform="translate(100, 112)">
+                                        <circle r="36" class="svg-state-node q0-node"/>
+                                        <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">0</tspan></text>
+                                        <text y="19" text-anchor="middle" class="svg-state-role">Init</text>
+                                    </g>
+
+                                    <!-- STATE q1 (COMPUTE/PROCESSING) -->
+                                    <g id="stateQ1" class="svg-state-group active-state" transform="translate(320, 112)">
+                                        <circle r="36" class="svg-state-node q1-node"/>
+                                        <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">1</tspan></text>
+                                        <text y="19" text-anchor="middle" class="svg-state-role">Compute</text>
+                                    </g>
+
+                                    <!-- STATE q2 (ACCEPT/FINAL) - CONCENTRIC DOUBLE RING -->
+                                    <g id="stateQ2" class="svg-state-group final-group" transform="translate(540, 112)">
+                                        <circle r="36" class="svg-state-node q2-node outer-ring"/>
+                                        <circle r="29" class="svg-state-node q2-node inner-ring"/>
+                                        <text y="-2" text-anchor="middle" class="svg-state-title">q<tspan dy="4" font-size="11">2</tspan></text>
+                                        <text y="19" text-anchor="middle" class="svg-state-role">Accept</text>
+                                    </g>
+                                </svg>
+                            </div>
+
+                            <!-- LIVE TRANSITION EXPLANATION BAR -->
+                            <div class="diagram-status-bar" id="diagramStatusBar">
+                                <span class="status-pill idle" id="livePill">IDLE</span>
+                                <div class="status-message">
+                                    <strong>Active:</strong>
+                                    <span id="currentTransition">Press "Start Simulation" to begin</span>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- 2. MACHINE STATE DASHBOARD (SIDE-BY-SIDE WITH DIAGRAM) -->
+                    <div class="card state-dashboard-card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="icon-accent green">📊</span>
+                                <span>Machine Dashboard</span>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-grid">
+                            <div class="metric-box">
+                                <span class="metric-label">CURRENT STEP</span>
+                                <strong class="metric-val" id="stepNumber">0</strong>
+                            </div>
+
+                            <div class="metric-box">
+                                <span class="metric-label">ACTIVE STATE</span>
+                                <strong class="metric-val accent-green" id="currentState">q1</strong>
+                            </div>
+
+                            <div class="metric-box">
+                                <span class="metric-label">INPUT POINTER</span>
+                                <strong class="metric-val accent-cyan" id="inputPosition">0</strong>
+                            </div>
+                        </div>
+
+                        <!-- INPUT & STACK VISUAL STRIP -->
+                        <div class="visual-split">
+                            <div class="sub-visual remaining-input-box">
+                                <div class="sub-visual-label">
+                                    <span>REMAINING INPUT TAPE</span>
+                                </div>
+                                <div id="remainingInput" class="code-stream">aabb</div>
+                            </div>
+
+                            <div class="sub-visual stack-box">
+                                <div class="sub-visual-label">
+                                    <span>STACK (TOP ON RIGHT)</span>
+                                </div>
+                                <div id="stackVisual" class="stack-track">
+                                    <div class="stack-cell top-cell">S</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
-                <!-- 2. MACHINE STATE DASHBOARD -->
-                <div class="card state-dashboard-card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <span class="icon-accent green">📊</span>
-                            <span>Machine Dashboard</span>
-                        </div>
-                    </div>
-
-                    <div class="dashboard-grid">
-                        <div class="metric-box">
-                            <span class="metric-label">CURRENT STEP</span>
-                            <strong class="metric-val" id="stepNumber">0</strong>
-                        </div>
-
-                        <div class="metric-box">
-                            <span class="metric-label">ACTIVE STATE</span>
-                            <strong class="metric-val accent-green" id="currentState">q1</strong>
-                        </div>
-
-                        <div class="metric-box">
-                            <span class="metric-label">INPUT POINTER</span>
-                            <strong class="metric-val accent-cyan" id="inputPosition">0</strong>
-                        </div>
-                    </div>
-
-                    <!-- INPUT & STACK VISUAL STRIP -->
-                    <div class="visual-split">
-                        <div class="sub-visual remaining-input-box">
-                            <div class="sub-visual-label">
-                                <span>REMAINING INPUT TAPE</span>
-                            </div>
-                            <div id="remainingInput" class="code-stream">aabb</div>
-                        </div>
-
-                        <div class="sub-visual stack-box">
-                            <div class="sub-visual-label">
-                                <span>STACK (TOP ON RIGHT)</span>
-                            </div>
-                            <div id="stackVisual" class="stack-track">
-                                <div class="stack-cell top-cell">S</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. SIMULATION STEPS LOG (CONTAINED - CANNOT EXIT BOX) -->
+                <!-- 3. SIMULATION STEPS LOG (MOVED UP, VISIBLE BESIDE BUTTONS) -->
                 <div class="card steps-card">
                     <div class="card-header">
                         <div class="card-title">
@@ -280,17 +285,17 @@
 
             <div class="panel-content">
 
-                <!-- 1. CFG GRAMMAR INPUT -->
+                <!-- 1. CFG GRAMMAR & INPUT STRING (UNIFIED COMPACT CARD) -->
                 <div class="card form-card">
                     <div class="card-header">
                         <div class="card-title">
                             <span class="step-num">1</span>
-                            <span>Context-Free Grammar (CFG)</span>
+                            <span>Grammar & Input String</span>
                         </div>
                     </div>
 
                     <div class="form-body">
-                        <div class="form-row">
+                        <div class="form-row form-row-3">
                             <div class="form-group">
                                 <label for="variables">Variables (V)</label>
                                 <input
@@ -314,6 +319,18 @@
                                     spellcheck="false"
                                 >
                             </div>
+
+                            <div class="form-group">
+                                <label for="inputString">Input String (w)</label>
+                                <input
+                                    id="inputString"
+                                    type="text"
+                                    value="aabb"
+                                    placeholder="e.g. aabb (or e)"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                >
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -323,7 +340,7 @@
                             </label>
                             <textarea
                                 id="productions"
-                                rows="4"
+                                rows="2"
                                 placeholder="S -> aSb&#10;S -> e"
                                 autocomplete="off"
                                 spellcheck="false"
@@ -333,31 +350,7 @@ S -> e</textarea>
                     </div>
                 </div>
 
-                <!-- 2. INPUT STRING -->
-                <div class="card form-card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <span class="step-num orange-step">2</span>
-                            <span>Input String to Verify (w)</span>
-                        </div>
-                    </div>
-
-                    <div class="form-body">
-                        <div class="form-group">
-                            <label for="inputString">Input String</label>
-                            <input
-                                id="inputString"
-                                type="text"
-                                value="aabb"
-                                placeholder="e.g. aabb (or e for empty)"
-                                autocomplete="off"
-                                spellcheck="false"
-                            >
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. ACTION BUTTONS (HACKERRANK STYLE) -->
+                <!-- 2. ACTION BUTTONS (ALIGNED AT THE RIGHT OF STEP LOG) -->
                 <div class="actions-card">
                     <div class="button-grid">
                         <button id="convertBtn" class="btn btn-primary" title="Convert CFG to Pushdown Automaton">
@@ -384,7 +377,7 @@ S -> e</textarea>
                     </div>
                 </div>
 
-                <!-- 4. CFG SUMMARY & EQUIVALENT PDA TRANSITIONS -->
+                <!-- 3. CFG SUMMARY & EQUIVALENT PDA TRANSITIONS -->
                 <div class="card cfg-details-card">
                     <div class="card-header">
                         <div class="card-title">
@@ -411,7 +404,7 @@ S -> e</textarea>
                     </div>
                 </div>
 
-                <!-- 5. SAMPLE TEST CASES -->
+                <!-- 4. SAMPLE TEST CASES -->
                 <div class="card examples-card">
                     <div class="card-header">
                         <div class="card-title">
@@ -448,23 +441,24 @@ S -> e</textarea>
                     </div>
                 </div>
 
-                <!-- 6. HOW CONVERSION WORKS -->
-                <div class="card workflow-card">
-                    <div class="card-header">
+                <!-- 5. HOW CONVERSION WORKS (COLLAPSIBLE ACCORDION FOR COMPACT VIEW) -->
+                <details class="card workflow-card" open>
+                    <summary class="card-header workflow-summary">
                         <div class="card-title">
                             <span class="icon-accent purple">ℹ️</span>
                             <span>Standard PDA Construction</span>
                         </div>
-                    </div>
+                        <span class="workflow-toggle-icon">▾</span>
+                    </summary>
                     <div class="workflow-body">
                         <ol class="workflow-steps">
-                            <li><strong>Start:</strong> Push start symbol $S$ and bottom marker $Z$ on state $q_0 \to q_1$.</li>
+                            <li><strong>Start:</strong> Push start symbol $S$ & bottom marker $Z$ on state $q_0 \to q_1$.</li>
                             <li><strong>Expand:</strong> In $q_1$, replace top variable $A$ with RHS $\alpha$ $(\varepsilon, A \to \alpha)$.</li>
                             <li><strong>Match:</strong> In $q_1$, match terminal $a$ with input symbol $(a, a \to \varepsilon)$.</li>
-                            <li><strong>Accept:</strong> When input is consumed & stack is empty, transition to $q_2$ (Accept).</li>
+                            <li><strong>Accept:</strong> Input consumed & stack empty $\to q_2$ (Accept).</li>
                         </ol>
                     </div>
-                </div>
+                </details>
 
             </div>
         </section>
