@@ -910,6 +910,80 @@ body.light-mode .stack-cell.top-cell {
     overflow: hidden;
 }
 
+/* Tabs in Card Header */
+.card-header-tabs {
+    padding: 5px 8px;
+    background: #15202e;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-shrink: 0;
+}
+
+body.light-mode .card-header-tabs {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+
+.card-tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.card-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.card-tab-btn:hover {
+    color: var(--text-white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.light-mode .card-tab-btn:hover {
+    color: #0f172a;
+    background: #e2e8f0;
+}
+
+.card-tab-btn.active {
+    color: var(--text-white);
+    background: #1c293a;
+    border-color: var(--border-highlight);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+body.light-mode .card-tab-btn.active {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.card-tab-btn .tab-icon {
+    font-size: 12px;
+}
+
+.card-tab-btn .tag-counter {
+    margin-left: 2px;
+}
+
 .tag-counter {
     font-size: 10px;
     color: var(--hr-purple);
@@ -920,10 +994,22 @@ body.light-mode .stack-cell.top-cell {
     border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
+.tag-counter.green-counter {
+    color: var(--hr-green);
+    background: #11281d;
+    border-color: rgba(0, 234, 100, 0.3);
+}
+
 body.light-mode .tag-counter {
     background: #f3e8ff;
     border-color: #e9d5ff;
     color: #7c3aed;
+}
+
+body.light-mode .tag-counter.green-counter {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #059669;
 }
 
 /* The Container Wrapper: Strictly Contained */
@@ -1044,6 +1130,13 @@ body.light-mode .state-badge {
     font-weight: 600;
 }
 
+.action-pill.accept-action {
+    background: rgba(0, 234, 100, 0.18);
+    color: var(--hr-green);
+    border: 1px solid rgba(0, 234, 100, 0.4);
+    font-weight: 700;
+}
+
 body.light-mode .action-pill {
     background: #f1f5f9;
 }
@@ -1052,6 +1145,12 @@ body.light-mode .action-pill.no-action {
     background: #fee2e2;
     color: #b91c1c;
     border: 1px solid #fca5a5;
+}
+
+body.light-mode .action-pill.accept-action {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
 }
 
 .steps-table tr.active-row {
@@ -1071,6 +1170,142 @@ body.light-mode .steps-table tr.active-row {
 .steps-table tr.active-row .step-num-badge {
     background: var(--hr-green);
     color: #06140e;
+}
+
+/* ================= PDA TRANSITION TABLE SPECIFIC STYLES ================= */
+.transition-table {
+    table-layout: auto;
+}
+
+.transition-table th,
+.transition-table td {
+    padding: 6px 9px;
+    font-size: 11px;
+}
+
+.col-trans-id { width: 5%; text-align: center; }
+.col-trans-type { width: 11%; text-align: center; }
+.col-trans-state { width: 10%; text-align: center; }
+.col-trans-input { width: 10%; text-align: center; }
+.col-trans-top { width: 10%; text-align: center; }
+.col-trans-next { width: 10%; text-align: center; }
+.col-trans-op { width: 22%; }
+.col-trans-delta { width: 22%; }
+
+.transition-table td:nth-child(1),
+.transition-table td:nth-child(2),
+.transition-table td:nth-child(3),
+.transition-table td:nth-child(4),
+.transition-table td:nth-child(5),
+.transition-table td:nth-child(6) {
+    text-align: center;
+}
+
+/* Rule Type Badges */
+.type-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.type-badge.start {
+    background: rgba(139, 92, 246, 0.16);
+    color: #c084fc;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.type-badge.expand {
+    background: rgba(0, 168, 232, 0.16);
+    color: #38bdf8;
+    border: 1px solid rgba(0, 168, 232, 0.4);
+}
+
+.type-badge.match {
+    background: rgba(0, 234, 100, 0.16);
+    color: #00EA64;
+    border: 1px solid rgba(0, 234, 100, 0.4);
+}
+
+.type-badge.accept {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+body.light-mode .type-badge.start {
+    background: #f3e8ff;
+    color: #7e22ce;
+    border-color: #d8b4fe;
+}
+
+body.light-mode .type-badge.expand {
+    background: #e0f2fe;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+body.light-mode .type-badge.match {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+
+body.light-mode .type-badge.accept {
+    background: #fef3c7;
+    color: #d97706;
+    border-color: #fde68a;
+}
+
+/* Formal Transition Function δ Code */
+.delta-code {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--hr-cyan-light);
+    background: rgba(0, 168, 232, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 168, 232, 0.2);
+    white-space: nowrap;
+}
+
+body.light-mode .delta-code {
+    background: #f0f9ff;
+    color: #0284c7;
+    border-color: #bae6fd;
+}
+
+.symbol-code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-white);
+}
+
+body.light-mode .symbol-code {
+    color: #0f172a;
+}
+
+.op-text {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-primary);
+}
+
+body.light-mode .op-text {
+    color: #1e293b;
+}
+
+.empty-table-placeholder {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
 }
 
 /* ================= RESULT BANNER ================= */
@@ -1768,6 +2003,21 @@ details.workflow-card[open] .workflow-toggle-icon {
 
     .steps-card .table-container-wrapper {
         max-height: 220px;
+    }
+
+    .card-header-tabs {
+        padding: 4px 6px;
+        overflow-x: auto;
+    }
+
+    .card-tabs-nav {
+        flex-wrap: nowrap;
+    }
+
+    .card-tab-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+        white-space: nowrap;
     }
 
     .steps-table th,

@@ -3,7 +3,7 @@
 // ============================================================
 
 // ------------------------------------------------------------
-// GLOBAL STATE
+// Global variables — the memory of your program
 // ------------------------------------------------------------
 let grammar = [];
 let inputString = "";
@@ -15,7 +15,7 @@ let simulationFinished = false;
 let simulationHistory = [];
 
 // ------------------------------------------------------------
-// DOM ELEMENTS
+// DOM elements — connecting JavaScript to the webpage
 // ------------------------------------------------------------
 const variablesInput = document.getElementById("variables");
 const terminalsInput = document.getElementById("terminals");
@@ -44,6 +44,14 @@ const inputPosition = document.getElementById("inputPosition");
 const remainingInput = document.getElementById("remainingInput");
 const stackVisual = document.getElementById("stackVisual");
 const simulationTable = document.getElementById("simulationTable");
+
+// Tab elements for Step Log and PDA Transition Table
+const tabStepLogBtn = document.getElementById("tabStepLogBtn");
+const tabTransitionTableBtn = document.getElementById("tabTransitionTableBtn");
+const stepLogWrapper = document.getElementById("stepLogWrapper");
+const transitionTableWrapper = document.getElementById("transitionTableWrapper");
+const transitionTableBody = document.getElementById("transitionTableBody");
+const totalTransitionsCount = document.getElementById("totalTransitionsCount");
 
 const currentTransition = document.getElementById("currentTransition");
 const transitionText = document.getElementById("transitionText");
@@ -370,9 +378,11 @@ function updateStepCounters(step) {
 // ------------------------------------------------------------
 function addSimulationRow(config, action) {
     const row = document.createElement("tr");
-    const stateName = (action === "ACCEPT") ? "q2" : "q1";
-    const isNoAction = (action === "NO ACTION");
-    const pillClass = isNoAction ? "action-pill no-action" : "action-pill";
+    const stateName = config.state || ((action === "ACCEPT") ? "q2" : "q1");
+    const isReject = (action === "REJECT" || action.startsWith("REJECT"));
+    let pillClass = "action-pill";
+    if (action === "ACCEPT") pillClass = "action-pill accept-action";
+    else if (isReject) pillClass = "action-pill no-action";
 
     row.innerHTML = `
         <td class="col-step"><span class="step-num-badge">#${currentStep}</span></td>
@@ -392,7 +402,7 @@ function addSimulationRow(config, action) {
     row.classList.add("active-row");
 
     // Strictly ensure steps DO NOT exit the box: auto-scroll inside container
-    const wrapper = document.querySelector(".table-container-wrapper");
+    const wrapper = document.querySelector("#stepLogWrapper");
     if (wrapper) {
         wrapper.scrollTop = wrapper.scrollHeight;
     }
@@ -408,10 +418,10 @@ function addSimulationRow(config, action) {
 function showConfiguration(config) {
     updateStepCounters(currentStep);
 
-    if (currentState) currentState.textContent = "q1";
-    if (inputPosition) inputPosition.textContent = config.inputPos;
+    if (currentState) currentState.textContent = config.state || "q1";
+    if (inputPosition) inputPosition.textContent = config.inputPos !== undefined ? config.inputPos : 0;
 
-    renderRemainingInput(config.inputPos);
+    renderRemainingInput(config.inputPos !== undefined ? config.inputPos : 0);
     renderStack(config.stack);
 }
 
@@ -470,19 +480,399 @@ function hideResult() {
 }
 
 // ------------------------------------------------------------
+// TAB SWITCHING (STEP LOG <-> PDA TRANSITION TABLE)
+// ------------------------------------------------------------
+function switchTab(tab) {
+    if (tab === "transitionTable") {
+        if (tabTransitionTableBtn) {
+            tabTransitionTableBtn.classList.add("active");
+            tabTransitionTableBtn.setAttribute("aria-selected", "true");
+        }
+        if (tabStepLogBtn) {
+            tabStepLogBtn.classList.remove("active");
+            tabStepLogBtn.setAttribute("aria-selected", "false");
+        }
+        if (stepLogWrapper) stepLogWrapper.style.display = "none";
+        if (transitionTableWrapper) transitionTableWrapper.style.display = "block";
+    } else {
+        if (tabStepLogBtn) {
+            tabStepLogBtn.classList.add("active");
+            tabStepLogBtn.setAttribute("aria-selected", "true");
+        }
+        if (tabTransitionTableBtn) {
+            tabTransitionTableBtn.classList.remove("active");
+            tabTransitionTableBtn.setAttribute("aria-selected", "false");
+        }
+        if (stepLogWrapper) stepLogWrapper.style.display = "block";
+        if (transitionTableWrapper) transitionTableWrapper.style.display = "none";
+    }
+}
+
+// ------------------------------------------------------------
+// AUTOMATIC PDA TRANSITION TABLE GENERATOR
+// ------------------------------------------------------------
+function generatePDATransitionTable() {
+    if (!transitionTableBody) return [];
+    if (grammar.length === 0) return [];
+
+    const startVar = grammar[0].lhs || "S";
+
+    // Extract terminals: from terminals input AND grammar RHS
+    const terminalsSet = new Set();
+    const rawTerms = terminalsInput ? terminalsInput.value : "a,b";
+    rawTerms.split(/[, \t]+/).forEach(t => {
+        const clean = t.trim();
+        if (clean && clean !== "e" && clean !== "ε") terminalsSet.add(clean);
+    });
+
+    // Also scan productions for terminals
+    grammar.forEach(prod => {
+        for (const ch of prod.rhs) {
+            if (!isVariable(ch) && ch !== "e" && ch !== "ε") {
+                terminalsSet.add(ch);
+            }
+        }
+    });
+
+    const terminalsList = Array.from(terminalsSet).sort();
+    const transitions = [];
+
+    // 1. Start rule: q0 -> q1
+    transitions.push({
+        type: "start",
+        typeLabel: "Start",
+        currentState: "q₀",
+        inputSymbol: "ε",
+        stackTop: "Z",
+        nextState: "q₁",
+        stackOp: `Push ${startVar} (SZ)`,
+        delta: `δ(q₀, ε, Z) = {(q₁, ${startVar}Z)}`,
+        note: `Initialize stack with start symbol '${startVar}' on marker 'Z'`
+    });
+
+    // 2. CFG Productions: Expansion on q1
+    grammar.forEach(prod => {
+        const rhsDisplay = prod.rhs === "" ? "ε" : prod.rhs;
+        const opDesc = prod.rhs === "" ? `Pop ${prod.lhs} (ε)` : `Replace ${prod.lhs} → ${prod.rhs}`;
+        transitions.push({
+            type: "expand",
+            typeLabel: "Expand",
+            currentState: "q₁",
+            inputSymbol: "ε",
+            stackTop: prod.lhs,
+            nextState: "q₁",
+            stackOp: opDesc,
+            delta: `δ(q₁, ε, ${prod.lhs}) = {(q₁, ${rhsDisplay})}`,
+            note: `Derivation rule: ${prod.lhs} → ${rhsDisplay}`
+        });
+    });
+
+    // 3. Match rules: Matching terminals on q1
+    terminalsList.forEach(t => {
+        transitions.push({
+            type: "match",
+            typeLabel: "Match",
+            currentState: "q₁",
+            inputSymbol: t,
+            stackTop: t,
+            nextState: "q₁",
+            stackOp: `Pop '${t}' (ε)`,
+            delta: `δ(q₁, ${t}, ${t}) = {(q₁, ε)}`,
+            note: `Read input '${t}', match and pop from stack`
+        });
+    });
+
+    // 4. Accept rule: q1 -> q2
+    transitions.push({
+        type: "accept",
+        typeLabel: "Accept",
+        currentState: "q₁",
+        inputSymbol: "ε",
+        stackTop: "Z",
+        nextState: "q₂",
+        stackOp: "Pop Z (ε)",
+        delta: "δ(q₁, ε, Z) = {(q₂, ε)}",
+        note: "Empty stack acceptance into final state q₂"
+    });
+
+    // Render table rows
+    transitionTableBody.innerHTML = "";
+    transitions.forEach((trans, index) => {
+        const tr = document.createElement("tr");
+
+        const idTd = document.createElement("td");
+        idTd.className = "col-trans-id";
+        idTd.innerHTML = `<span class="step-num-badge">#${index + 1}</span>`;
+
+        const typeTd = document.createElement("td");
+        typeTd.className = "col-trans-type";
+        typeTd.innerHTML = `<span class="type-badge ${trans.type}">${trans.typeLabel}</span>`;
+
+        const stateTd = document.createElement("td");
+        stateTd.className = "col-trans-state";
+        stateTd.innerHTML = `<span class="state-badge">${trans.currentState}</span>`;
+
+        const inputTd = document.createElement("td");
+        inputTd.className = "col-trans-input";
+        inputTd.innerHTML = `<span class="symbol-code">${trans.inputSymbol}</span>`;
+
+        const topTd = document.createElement("td");
+        topTd.className = "col-trans-top";
+        topTd.innerHTML = `<span class="symbol-code">${trans.stackTop}</span>`;
+
+        const nextTd = document.createElement("td");
+        nextTd.className = "col-trans-next";
+        nextTd.innerHTML = `<span class="state-badge">${trans.nextState}</span>`;
+
+        const opTd = document.createElement("td");
+        opTd.className = "col-trans-op";
+        opTd.innerHTML = `<span class="op-text">${trans.stackOp}</span>`;
+
+        const deltaTd = document.createElement("td");
+        deltaTd.className = "col-trans-delta";
+        deltaTd.innerHTML = `<code class="delta-code">${trans.delta}</code>`;
+
+        tr.appendChild(idTd);
+        tr.appendChild(typeTd);
+        tr.appendChild(stateTd);
+        tr.appendChild(inputTd);
+        tr.appendChild(topTd);
+        tr.appendChild(nextTd);
+        tr.appendChild(opTd);
+        tr.appendChild(deltaTd);
+
+        transitionTableBody.appendChild(tr);
+    });
+
+    if (totalTransitionsCount) {
+        totalTransitionsCount.textContent = `${transitions.length} Rules`;
+    }
+
+    return transitions;
+}
+
+// ------------------------------------------------------------
 // CONVERT CFG TO PDA
 // ------------------------------------------------------------
 function convertToPDA() {
     if (!parseGrammar()) return;
 
     displayCFG();
+    const transitions = generatePDATransitionTable();
     updateDiagram("idle");
 
+    // Automatically display the transition table tab to show conversion
+    switchTab("transitionTable");
+
     if (currentTransition) {
-        currentTransition.textContent = `CFG converted! Start rule: q₀ → q₁, Push '${grammar[0].lhs}'`;
+        currentTransition.textContent = `CFG successfully converted to PDA! Generated ${transitions.length} transition rules.`;
+    }
+}
+
+// ------------------------------------------------------------
+// FIND PDA SIMULATION PATH (NONDETERMINISTIC BRANCH EXPLORATION)
+// ------------------------------------------------------------
+function findPDASimulationPath(targetGrammar, rawInput) {
+    if (!targetGrammar || targetGrammar.length === 0) {
+        return { accepted: false, steps: [] };
     }
 
-    alert("CFG successfully converted to PDA!\nClick 'Start Simulation' to run step-by-step.");
+    const startSymbol = targetGrammar[0].lhs || "S";
+    const cleanInput = (rawInput === "e" || rawInput === "ε") ? "" : rawInput;
+
+    const initialNode = {
+        state: "q1",
+        inputPos: 0,
+        stack: startSymbol,
+        action: `Start (Push ${startSymbol})`,
+        rule: { type: "start", top: startSymbol },
+        path: [
+            {
+                stepNumber: 1,
+                state: "q1",
+                inputPos: 0,
+                stack: startSymbol,
+                action: `Start (Push ${startSymbol})`,
+                rule: { type: "start", top: startSymbol },
+                isAccepted: null,
+                diagramPhase: "start",
+                diagramDetails: { top: startSymbol }
+            }
+        ]
+    };
+
+    const queue = [initialNode];
+    const visited = new Set();
+    visited.add("0|" + startSymbol);
+
+    let bestDeadEnd = initialNode;
+    let maxInputConsumed = -1;
+    let acceptingNode = null;
+    let iterations = 0;
+    const maxIterations = 5000;
+
+    while (queue.length > 0 && iterations < maxIterations) {
+        iterations++;
+        const curr = queue.shift();
+
+        // 1. Acceptance condition: input consumed AND stack completely empty!
+        if (curr.inputPos === cleanInput.length && curr.stack.length === 0) {
+            acceptingNode = curr;
+            break;
+        }
+
+        if (curr.inputPos > maxInputConsumed) {
+            maxInputConsumed = curr.inputPos;
+            bestDeadEnd = curr;
+        }
+
+        if (curr.stack.length === 0) {
+            continue; // Cannot transition further if stack is empty but input remains
+        }
+
+        const top = curr.stack[curr.stack.length - 1];
+
+        // 2. Variable Expansion
+        if (isVariable(top)) {
+            for (const prod of targetGrammar) {
+                if (prod.lhs !== top) continue;
+
+                let nextStack = curr.stack.substring(0, curr.stack.length - 1);
+                // Push RHS in reverse order
+                for (let i = prod.rhs.length - 1; i >= 0; i--) {
+                    nextStack += prod.rhs[i];
+                }
+
+                // Pruning 1: count terminals in nextStack vs remaining input length
+                let termCount = 0;
+                for (let j = 0; j < nextStack.length; j++) {
+                    if (!isVariable(nextStack[j])) termCount++;
+                }
+                const remainingLength = cleanInput.length - curr.inputPos;
+                if (termCount > remainingLength) {
+                    continue; // Prune: more terminals on stack than characters left to match
+                }
+
+                // Pruning 2: stack depth safety limit
+                if (nextStack.length > Math.max(cleanInput.length * 3 + 10, 20)) {
+                    continue;
+                }
+
+                const key = curr.inputPos + "|" + nextStack;
+                if (visited.has(key)) continue;
+                visited.add(key);
+
+                const actionText = `Expand ${top} → ${prod.rhs || "ε"}`;
+                const nextStepObj = {
+                    stepNumber: curr.path.length + 1,
+                    state: "q1",
+                    inputPos: curr.inputPos,
+                    stack: nextStack,
+                    action: actionText,
+                    rule: { type: "expand", variable: top, rhs: prod.rhs },
+                    isAccepted: null,
+                    diagramPhase: "expand",
+                    diagramDetails: { variable: top, rhs: prod.rhs }
+                };
+
+                const childNode = {
+                    state: "q1",
+                    inputPos: curr.inputPos,
+                    stack: nextStack,
+                    action: actionText,
+                    rule: { type: "expand", variable: top, rhs: prod.rhs },
+                    path: [...curr.path, nextStepObj]
+                };
+
+                // Quick accept check if this rule emptied stack and input is consumed
+                if (curr.inputPos === cleanInput.length && nextStack.length === 0) {
+                    acceptingNode = childNode;
+                    break;
+                }
+
+                queue.push(childNode);
+            }
+
+            if (acceptingNode) break;
+            continue;
+        }
+
+        // 3. Terminal Match
+        if (curr.inputPos < cleanInput.length && cleanInput[curr.inputPos] === top) {
+            const nextStack = curr.stack.substring(0, curr.stack.length - 1);
+            const nextPos = curr.inputPos + 1;
+            const key = nextPos + "|" + nextStack;
+
+            if (!visited.has(key)) {
+                visited.add(key);
+                const actionText = `Match '${top}' (Pop)`;
+                const nextStepObj = {
+                    stepNumber: curr.path.length + 1,
+                    state: "q1",
+                    inputPos: nextPos,
+                    stack: nextStack,
+                    action: actionText,
+                    rule: { type: "match", symbol: top },
+                    isAccepted: null,
+                    diagramPhase: "match",
+                    diagramDetails: { symbol: top }
+                };
+
+                const childNode = {
+                    state: "q1",
+                    inputPos: nextPos,
+                    stack: nextStack,
+                    action: actionText,
+                    rule: { type: "match", symbol: top },
+                    path: [...curr.path, nextStepObj]
+                };
+
+                if (nextPos === cleanInput.length && nextStack.length === 0) {
+                    acceptingNode = childNode;
+                    break;
+                }
+
+                queue.push(childNode);
+            }
+        }
+    }
+
+    if (acceptingNode) {
+        const acceptStep = {
+            stepNumber: acceptingNode.path.length + 1,
+            state: "q2",
+            inputPos: cleanInput.length,
+            stack: "",
+            action: "ACCEPT",
+            rule: { type: "accept" },
+            isAccepted: true,
+            diagramPhase: "accept",
+            diagramDetails: {}
+        };
+        return {
+            accepted: true,
+            steps: [...acceptingNode.path, acceptStep]
+        };
+    }
+
+    // No branch accepted: build clean reject trace from deepest branch explored
+    const rejectPath = [...bestDeadEnd.path];
+    rejectPath.push({
+        stepNumber: rejectPath.length + 1,
+        state: "q1",
+        inputPos: bestDeadEnd.inputPos,
+        stack: bestDeadEnd.stack,
+        action: "REJECT",
+        rule: { type: "reject" },
+        isAccepted: false,
+        diagramPhase: "reject",
+        diagramDetails: {}
+    });
+
+    return {
+        accepted: false,
+        steps: rejectPath
+    };
 }
 
 // ------------------------------------------------------------
@@ -491,8 +881,10 @@ function convertToPDA() {
 function startSimulation() {
     if (!parseGrammar()) return;
 
-    inputString = inputStringInput.value.trim();
+    // Switch to step log tab to display live simulation
+    switchTab("stepLog");
 
+    inputString = inputStringInput.value.trim();
     if (inputString === "e" || inputString === "ε") {
         inputString = "";
     }
@@ -500,8 +892,6 @@ function startSimulation() {
     displayCFG();
 
     // Reset simulation variables
-    simulationQueue = [];
-    visited = new Set();
     simulationHistory = [];
     currentStep = 0;
     simulationStarted = true;
@@ -513,21 +903,33 @@ function startSimulation() {
     if (totalStepsRecorded) totalStepsRecorded.textContent = "0 Recorded";
     hideResult();
 
-    const initial = createInitialConfiguration();
-    initial.displayed = true;
+    // Compute input-dependent nondeterministic PDA path
+    const simResult = findPDASimulationPath(grammar, inputString);
+    plannedSimulationSteps = simResult.steps;
 
-    simulationQueue.push(initial);
-    visited.add(configurationKey(initial));
+    if (!plannedSimulationSteps || plannedSimulationSteps.length === 0) {
+        showResult(false);
+        nextBtn.disabled = true;
+        return;
+    }
 
-    nextBtn.disabled = false;
-
-    // Show initial state (Step 1)
+    // Show initial configuration (Step 1)
     currentStep = 1;
-    showConfiguration(initial);
-    addSimulationRow(initial, "Start (Push " + initial.stack + ")");
+    const initialStep = plannedSimulationSteps[0];
+    showConfiguration(initialStep);
+    addSimulationRow(initialStep, initialStep.action);
+    updateDiagram(initialStep.diagramPhase, initialStep.diagramDetails);
+    recordStepSnapshot(initialStep, initialStep.action, initialStep.diagramPhase, initialStep.diagramDetails, initialStep.isAccepted);
 
-    updateDiagram("start", { top: initial.stack });
-    recordStepSnapshot(initial, "Start (Push " + initial.stack + ")", "start", { top: initial.stack }, null);
+    if (plannedSimulationSteps.length === 1) {
+        simulationFinished = true;
+        nextBtn.disabled = true;
+        if (initialStep.isAccepted !== null) {
+            showResult(initialStep.isAccepted);
+        }
+    } else {
+        nextBtn.disabled = false;
+    }
 }
 
 // ------------------------------------------------------------
@@ -537,192 +939,31 @@ function nextStep() {
     if (!simulationStarted) return;
     if (simulationFinished) return;
 
-    if (simulationQueue.length === 0) {
-        simulationFinished = true;
-        showResult(false);
-        nextBtn.disabled = true;
-        recordStepSnapshot(
-            { inputPos: inputPosition ? parseInt(inputPosition.textContent, 10) || 0 : 0, stack: "" },
-            "REJECT",
-            "reject",
-            {},
-            false
-        );
-        return;
-    }
-
-    const current = simulationQueue.shift();
-
-    // --------------------------------------------------------
-    // ACCEPT CHECK: Input consumed & Stack empty
-    // --------------------------------------------------------
-    if (current.inputPos === inputString.length && current.stack.length === 0) {
-        currentStep++;
-        showConfiguration(current);
-        addSimulationRow(current, "ACCEPT");
-        showResult(true);
-
+    if (currentStep >= plannedSimulationSteps.length) {
         simulationFinished = true;
         nextBtn.disabled = true;
-        recordStepSnapshot(current, "ACCEPT", "accept", {}, true);
         return;
     }
 
-    // --------------------------------------------------------
-    // EMPTY STACK BUT INPUT STILL REMAINS -> CANNOT MATCH
-    // --------------------------------------------------------
-    if (current.stack.length === 0) {
-        processNextConfiguration();
-        return;
-    }
-
-    const top = current.stack[current.stack.length - 1];
-
-    // --------------------------------------------------------
-    // VARIABLE EXPANSION
-    // --------------------------------------------------------
-    if (isVariable(top)) {
-        let generated = false;
-        let primaryChild = null;
-
-        for (const production of grammar) {
-            if (production.lhs !== top) continue;
-
-            let newStack = current.stack.substring(0, current.stack.length - 1);
-
-            // Push RHS in reverse order
-            for (let i = production.rhs.length - 1; i >= 0; i--) {
-                newStack += production.rhs[i];
-            }
-
-            const next = {
-                inputPos: current.inputPos,
-                stack: newStack,
-                action: `Expand ${top} → ${production.rhs || "ε"}`,
-                rule: {
-                    type: "expand",
-                    variable: top,
-                    rhs: production.rhs
-                }
-            };
-
-            const key = configurationKey(next);
-
-            if (!visited.has(key)) {
-                visited.add(key);
-                simulationQueue.push(next);
-                generated = true;
-                if (!primaryChild) {
-                    primaryChild = next;
-                }
-            }
-        }
-
-        if (generated && primaryChild) {
-            primaryChild.displayed = true;
-            currentStep++;
-            showConfiguration(primaryChild);
-            addSimulationRow(primaryChild, primaryChild.action);
-            updateDiagram("expand", primaryChild.rule);
-            recordStepSnapshot(primaryChild, primaryChild.action, "expand", primaryChild.rule, null);
-        } else {
-            processNextConfiguration();
-        }
-
-        return;
-    }
-
-    // --------------------------------------------------------
-    // TERMINAL MATCHING
-    // --------------------------------------------------------
-    if (
-        current.inputPos < inputString.length &&
-        inputString[current.inputPos] === top
-    ) {
-        const newStack = current.stack.substring(0, current.stack.length - 1);
-
-        const next = {
-            inputPos: current.inputPos + 1,
-            stack: newStack,
-            action: `Match '${top}' (Pop)`,
-            rule: {
-                type: "match",
-                symbol: top
-            }
-        };
-
-        const key = configurationKey(next);
-
-        if (!visited.has(key)) {
-            visited.add(key);
-            next.displayed = true;
-            simulationQueue.push(next);
-
-            currentStep++;
-            showConfiguration(next);
-            addSimulationRow(next, next.action);
-            updateDiagram("match", next.rule);
-            recordStepSnapshot(next, next.action, "match", next.rule, null);
-        } else {
-            processNextConfiguration();
-        }
-
-        return;
-    }
-
-    // --------------------------------------------------------
-    // NO DIRECT TRANSITION
-    // --------------------------------------------------------
-    updateDiagram("reject", { top: top });
-    processNextConfiguration();
-}
-
-// ------------------------------------------------------------
-// PROCESS NEXT CONFIGURATION (BRANCH SEARCH)
-// ------------------------------------------------------------
-function processNextConfiguration() {
-    if (simulationQueue.length === 0) {
-        simulationFinished = true;
-        showResult(false);
-        nextBtn.disabled = true;
-        recordStepSnapshot(
-            { inputPos: inputPosition ? parseInt(inputPosition.textContent, 10) || 0 : 0, stack: "" },
-            "REJECT",
-            "reject",
-            {},
-            false
-        );
-        return;
-    }
-
-    const next = simulationQueue[0];
-    const actionText = next.displayed ? "NO ACTION" : (next.action || "NO ACTION");
-    next.displayed = true;
-
+    const nextStepObj = plannedSimulationSteps[currentStep];
     currentStep++;
-    showConfiguration(next);
-    addSimulationRow(next, actionText);
 
-    if (actionText === "NO ACTION") {
-        updateDiagram("no-action");
-        recordStepSnapshot(
-            next,
-            "NO ACTION",
-            "no-action",
-            {},
-            null
-        );
-    } else {
-        if (next.rule) {
-            updateDiagram(next.rule.type, next.rule);
+    showConfiguration(nextStepObj);
+    addSimulationRow(nextStepObj, nextStepObj.action);
+    updateDiagram(nextStepObj.diagramPhase, nextStepObj.diagramDetails);
+    recordStepSnapshot(nextStepObj, nextStepObj.action, nextStepObj.diagramPhase, nextStepObj.diagramDetails, nextStepObj.isAccepted);
+
+    if (prevBtn) prevBtn.disabled = false;
+
+    // Check if we reached the final step
+    if (currentStep === plannedSimulationSteps.length) {
+        simulationFinished = true;
+        nextBtn.disabled = true;
+        if (nextStepObj.isAccepted === true) {
+            showResult(true);
+        } else if (nextStepObj.isAccepted === false) {
+            showResult(false);
         }
-        recordStepSnapshot(
-            next,
-            actionText,
-            next.rule ? next.rule.type : "idle",
-            next.rule || {},
-            null
-        );
     }
 }
 
@@ -731,111 +972,61 @@ function processNextConfiguration() {
 // ------------------------------------------------------------
 function prevStep() {
     if (!simulationStarted) return;
-    if (simulationHistory.length <= 1) return;
+    if (currentStep <= 1) return;
 
-    // Pop the current step snapshot
+    // Remove the current step from history and table
     simulationHistory.pop();
-
-    // The new top is the previous step state
-    const targetState = simulationHistory[simulationHistory.length - 1];
-    if (!targetState) return;
-
-    // Restore step state
-    currentStep = targetState.stepNumber;
-    updateStepCounters(currentStep);
-
-    // Restore queue and visited set
-    simulationQueue = targetState.simulationQueue.map(item => ({ ...item }));
-    visited = new Set(targetState.visited);
-    simulationFinished = !!targetState.simulationFinished;
-    nextBtn.disabled = targetState.simulationFinished;
-
-    // Restore configuration (dashboard, stack, tape)
-    showConfiguration(targetState.config);
-
-    // Restore state badge text
-    if (currentState) {
-        currentState.textContent = targetState.currentState || "q1";
-    }
-
-    // Restore diagram
-    if (targetState.diagramPhase) {
-        updateDiagram(targetState.diagramPhase, targetState.diagramDetails);
-    }
-
-    // Restore result banner
-    if (targetState.isAccepted === true) {
-        showResult(true);
-        simulationFinished = true;
-        nextBtn.disabled = true;
-    } else if (targetState.isAccepted === false) {
-        showResult(false);
-        simulationFinished = true;
-        nextBtn.disabled = true;
-    } else {
-        hideResult();
-    }
-
-    // Restore transition pill and text if available
-    if (currentTransition && targetState.currentTransitionText) {
-        currentTransition.textContent = targetState.currentTransitionText;
-    }
-    if (livePill && targetState.livePillClass) {
-        livePill.className = targetState.livePillClass;
-        livePill.textContent = targetState.livePillText;
-    }
-
-    // Remove the last table row from simulationTable
     if (simulationTable && simulationTable.lastElementChild) {
         simulationTable.removeChild(simulationTable.lastElementChild);
-
-        // Highlight new last row
-        document
-            .querySelectorAll("#simulationTable tr")
-            .forEach(r => r.classList.remove("active-row"));
-
         if (simulationTable.lastElementChild) {
+            document
+                .querySelectorAll("#simulationTable tr")
+                .forEach(r => r.classList.remove("active-row"));
             simulationTable.lastElementChild.classList.add("active-row");
-        }
-
-        // Auto-scroll inside wrapper
-        const wrapper = document.querySelector(".table-container-wrapper");
-        if (wrapper) {
-            wrapper.scrollTop = wrapper.scrollHeight;
-        }
-
-        if (totalStepsRecorded) {
-            totalStepsRecorded.textContent = `${simulationTable.children.length} Recorded`;
         }
     }
 
-    // Update prevBtn disabled state
+    currentStep--;
+    simulationFinished = false;
+    hideResult();
+    nextBtn.disabled = false;
+
+    const targetStep = plannedSimulationSteps[currentStep - 1];
+    if (targetStep) {
+        showConfiguration(targetStep);
+        updateDiagram(targetStep.diagramPhase, targetStep.diagramDetails);
+    }
+
+    if (totalStepsRecorded) {
+        totalStepsRecorded.textContent = `${simulationTable.children.length} Recorded`;
+    }
+
     if (prevBtn) {
-        prevBtn.disabled = (simulationHistory.length <= 1);
+        prevBtn.disabled = (currentStep <= 1);
     }
 }
 
 // ------------------------------------------------------------
-// RESET
+// RESET SIMULATION
 // ------------------------------------------------------------
 function resetSimulation() {
-    simulationQueue = [];
-    visited = new Set();
+    plannedSimulationSteps = [];
     simulationHistory = [];
     currentStep = 0;
     simulationStarted = false;
     simulationFinished = false;
 
     if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
 
     updateStepCounters(0);
 
     if (currentState) currentState.textContent = "q1";
     if (inputPosition) inputPosition.textContent = "0";
 
-    const defaultStr = inputStringInput.value || "aabb";
+    const defaultStr = inputStringInput ? inputStringInput.value : "";
     if (remainingInput) {
-        remainingInput.textContent = (defaultStr === "e" || defaultStr === "ε") ? "ε" : defaultStr;
+        remainingInput.textContent = (defaultStr === "e" || defaultStr === "ε" || !defaultStr) ? "ε" : defaultStr;
     }
 
     if (stackVisual) {
@@ -847,9 +1038,11 @@ function resetSimulation() {
     if (totalStepsRecorded) totalStepsRecorded.textContent = "0 Recorded";
 
     hideResult();
-    nextBtn.disabled = true;
-
     updateDiagram("idle");
+
+    if (currentTransition) {
+        currentTransition.textContent = "Press \"Start Simulation\" to begin";
+    }
 }
 
 // ------------------------------------------------------------
@@ -872,6 +1065,33 @@ if (prevBtn) prevBtn.addEventListener("click", prevStep);
 nextBtn.addEventListener("click", nextStep);
 resetBtn.addEventListener("click", resetSimulation);
 
+if (tabStepLogBtn) {
+    tabStepLogBtn.addEventListener("click", () => switchTab("stepLog"));
+}
+if (tabTransitionTableBtn) {
+    tabTransitionTableBtn.addEventListener("click", () => switchTab("transitionTable"));
+}
+
+// Reset simulation on input string change (keeps Transition Table unchanged)
+if (inputStringInput) {
+    inputStringInput.addEventListener("input", () => {
+        resetSimulation();
+    });
+}
+
+// When CFG definitions change, regenerate transition table & CFG display
+[variablesInput, terminalsInput, productionsInput].forEach(inp => {
+    if (inp) {
+        inp.addEventListener("input", () => {
+            if (parseGrammar()) {
+                displayCFG();
+                generatePDATransitionTable();
+                resetSimulation();
+            }
+        });
+    }
+});
+
 // ------------------------------------------------------------
 // INITIAL DISPLAY ON PAGE LOAD
 // ------------------------------------------------------------
@@ -879,3 +1099,4 @@ initTheme();
 parseGrammar();
 displayCFG();
 updateDiagram("idle");
+generatePDATransitionTable();
